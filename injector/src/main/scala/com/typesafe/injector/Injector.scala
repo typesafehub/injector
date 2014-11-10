@@ -38,14 +38,16 @@ class Injector extends xsbti.AppMain {
                |or multiple times the same option to add elements.
                |For additional information, please contact http://www.typesafe.com.""".stripMargin)
       val debug = opt[Boolean](noshort = true, descr = "Print more debugging information")
-      private def fileExists(p: String) = {
+      private def fileExists(p: String, dirs: Boolean) = {
         val f = new File(p)
         val valid = f.exists
-        if (!valid) println("This element cannot be found: " + p)
+        if (!valid) println("This " + (if (dirs) "directory" else "file") + " cannot be found: " + p)
         valid
       }
       val files = opt[List[String]](descr = "Path to the file(s) that should be inserted into jars.",
-        required = true, validate = (_ forall fileExists))
+        required = true, validate = (_.forall(fileExists(_, dirs = false))))
+      val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
+        "that will be processed. Every directory will be scanned recursively.", validate = (_.forall(fileExists(_, dirs = true))))
       val jars = opt[List[String]](descr = "Patterns that specify which jars should be considered, in glob format." +
         "For instance, c*.jar will match all jars whose basename begins with c. If multiple patterns are specified, " +
         "all the jars that match at least one pattern will be considered. All patterns must end with \".jar\". " +
@@ -58,8 +60,6 @@ class Injector extends xsbti.AppMain {
           valid
         }),
         default = Some(List[String]("*.jar")))
-      val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
-        "that will be processed. Every directory will be scanned recursively.", validate = (_ forall fileExists))
       val noChecksums = opt[Boolean](descr = "Do not regenerate the checksum files of the modified jar files. By default, " +
         "New mds and sha1 files will be generated, to replace the existing ones.")
     }

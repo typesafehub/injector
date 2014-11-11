@@ -159,7 +159,7 @@ class Injector extends xsbti.AppMain {
         val list = in.entries.toSeq
         val uniques = list.foldLeft(Map[String, JarEntry]()) { (map, entry) =>
           if (map.isDefinedAt(entry.getName)) {
-            println("*WARNING* In file " + jar.getCanonicalPath +
+            if (!quiet) println("*WARNING* In file " + jar.getCanonicalPath +
               ", an illegal duplicate entry will be removed: " + entry.getName)
             map
           } else

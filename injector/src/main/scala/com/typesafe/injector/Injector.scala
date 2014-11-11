@@ -62,7 +62,7 @@ class Injector extends xsbti.AppMain {
       val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
         "that will be processed. Every directory will be scanned recursively. In place of a directory, you can specify " +
         "individual jar files.", validate = (_.forall(fileExists(_, dirs = true))))
-      val jars = opt[List[String]](descr = "Patterns that specify which jars should be considered, in glob format." +
+      val jars = opt[List[String]](descr = "Patterns that specify which jars should be considered, in glob format. " +
         "For instance, c*.jar will match all jars whose basename begins with c. If multiple patterns are specified, " +
         "all the jars that match at least one pattern will be considered. All patterns must end with \".jar\". " +
         "If omitted, all jars will be processed.",
@@ -75,7 +75,7 @@ class Injector extends xsbti.AppMain {
         }),
         default = Some(List[String]("*.jar")))
       val noChecksums = opt[Boolean](descr = "Do not regenerate the checksum files of the modified jar files. By default, " +
-        "New mds and sha1 files will be generated, replacing the old ones.")
+        "new mds and sha1 files will be generated, replacing the old ones.")
       val to = opt[String](descr = "By default, the jar files will be overwritten in place. If you would like to " +
         "preserve the originals, you can specify using this option a directory where the new files will be stored. The " +
         "destination directory will be created, if it does not exist yet.", validate = { to =>
@@ -86,7 +86,7 @@ class Injector extends xsbti.AppMain {
         valid
       })
       val quiet = opt[Boolean](descr = "Do not print messages on the console.")
-      // TODO: add re-signing support, probably
+      // Note: the tool will currently not re-sign previously signed jars
     }
     val conf = new conf(name, version)
     val debug = conf.debug()
@@ -153,7 +153,8 @@ class Injector extends xsbti.AppMain {
         }
         val in = new JarFile(jar)
         //
-        // The jar may contain duplicate entries (even though it shouldn't).
+        // The jar may contain duplicate entries (even though it shouldn't);
+        // in particular, the scalap jar in Scala 2.11.4 is broken.
         // Rather than aborting, we print a warning and try to continue
         val list = in.entries.toSeq
         val uniques = list.foldLeft(Map[String, JarEntry]()) { (map, entry) =>

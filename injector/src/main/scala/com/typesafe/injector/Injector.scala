@@ -60,7 +60,7 @@ class Injector extends xsbti.AppMain {
         "specifies just a directory, please append a '/' to the path string.",
         required = true, validate = (_.map(_.split('@').head).forall(fileExists(_, dirs = false))))
       val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
-        "that will be processed. Every directory will be scanned recursively. In place of a directory, you can specify "+
+        "that will be processed. Every directory will be scanned recursively. In place of a directory, you can specify " +
         "individual jar files.", validate = (_.forall(fileExists(_, dirs = true))))
       val jars = opt[List[String]](descr = "Patterns that specify which jars should be considered, in glob format." +
         "For instance, c*.jar will match all jars whose basename begins with c. If multiple patterns are specified, " +
@@ -130,7 +130,19 @@ class Injector extends xsbti.AppMain {
             }
         }
         val in = new JarFile(jar)
-        in.entries.foreach { entry =>
+        //
+        // The jar may contain duplicate entries (even though it shouldn't);
+        // rather than aborting, we print a warning and try to continue
+        val list = in.entries.toSeq
+        val uniques = list.foldLeft(Map[String, JarEntry]())((map, entry) =>
+          if (map.isDefinedAt(entry.getName)) {
+            println("*WARNING* In file " + jar.getCanonicalPath +
+              ", an illegal duplicate entry will be removed: " + entry.getName)
+            map
+          } else
+            map.updated(entry.getName, entry))
+
+        uniques.valuesIterator.foreach { entry =>
           println("Found entry " + entry.getName + ", size: " + entry.getSize)
           if (!targets.contains(entry.getName())) {
             writeEntry(entry, in.getInputStream(entry))

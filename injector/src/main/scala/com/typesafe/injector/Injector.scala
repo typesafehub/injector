@@ -105,8 +105,9 @@ class Injector extends xsbti.AppMain {
     //... find a common base for all dirs, and make a recursive copy,
     // then use "to" rather than "dirs" as a base to search jars
 
-    // Let's find out which jars need to be processed
-
+    // Let's find out which jars need to be processed. This code will work
+    // equally well if an element of "dirs" is a jar file, rather than a directory.
+    //
     val filter = patterns.map(GlobFilter(_)).reduce(_ | _).--(DirectoryFilter)
     val jars = dirs.map(new File(_)).map(_.**(filter)).reduce(_ +++ _).get // APL?
 
@@ -116,8 +117,7 @@ class Injector extends xsbti.AppMain {
       withTemporaryFile("injector", "tempJar") { temp =>
         val out = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(temp)))
 
-        // first we copy the old jar, stripping away the entries that will be overwritten
-
+        // Initially we copy the old jar content, and later we append the new entries
         val bufferSize = 131072
         val buffer = new Array[Byte](bufferSize)
         def writeEntry(where: JarEntry, source: InputStream) = {
@@ -131,26 +131,27 @@ class Injector extends xsbti.AppMain {
         }
         val in = new JarFile(jar)
         //
-        // The jar may contain duplicate entries (even though it shouldn't);
-        // rather than aborting, we print a warning and try to continue
+        // The jar may contain duplicate entries (even though it shouldn't).
+        // Rather than aborting, we print a warning and try to continue
         val list = in.entries.toSeq
-        val uniques = list.foldLeft(Map[String, JarEntry]())((map, entry) =>
+        val uniques = list.foldLeft(Map[String, JarEntry]()) { (map, entry) =>
           if (map.isDefinedAt(entry.getName)) {
             println("*WARNING* In file " + jar.getCanonicalPath +
               ", an illegal duplicate entry will be removed: " + entry.getName)
             map
           } else
-            map.updated(entry.getName, entry))
+            map.updated(entry.getName, entry)
+        }
 
+        // Copy all the content, skipping the entries that will be replaced
         uniques.valuesIterator.foreach { entry =>
-          println("Found entry " + entry.getName + ", size: " + entry.getSize)
+          if (debug) println("Found entry " + entry.getName + ", size: " + entry.getSize)
           if (!targets.contains(entry.getName())) {
             writeEntry(entry, in.getInputStream(entry))
           }
         }
 
-        // then, we insert the new entries at the appropriate target locations
-
+        // Finally, insert the new entries at the appropriate target locations
         filesAndTargets.foreach {
           case (file, target) =>
             writeEntry(new JarEntry(target), new BufferedInputStream(new FileInputStream(file)))
@@ -159,10 +160,10 @@ class Injector extends xsbti.AppMain {
         out.flush()
         out.close()
 
-        // time to move the temporary file back to the original location
+        // Time to move the temporary file back to the original location
         move(temp, jar)
 
-        // ok. Do we need to regenerate the checksum files?
+        // Do we need to regenerate the checksum files?
         if (checksums) {
           Seq("md5", "sha1") foreach { algorithm =>
             val checksumFile = new File(jar.getCanonicalPath + "." + algorithm)

@@ -76,9 +76,16 @@ class Injector extends xsbti.AppMain {
         default = Some(List[String]("*.jar")))
       val noChecksums = opt[Boolean](descr = "Do not regenerate the checksum files of the modified jar files. By default, " +
         "New mds and sha1 files will be generated, replacing the old ones.")
-      //      val to = opt[String](descr = "By default, the existing files will be overwritten in place. If you would like to "+
-      //          "preserve the originals, you can specify using this option a directory where the new files will be stored. The "+
-      //          "destination directory will be created, if it does not exist yet.")
+      val to = opt[String](descr = "By default, the jar files will be overwritten in place. If you would like to " +
+        "preserve the originals, you can specify using this option a directory where the new files will be stored. The " +
+        "destination directory will be created, if it does not exist yet.", validate = { to =>
+        val valid = !new File(to).isFile
+        if (!valid) {
+          println("The selected \"to\" destination already exists, and is a file")
+        }
+        valid
+      })
+      val quiet = opt[Boolean](descr = "Do not print messages on the console.")
       // TODO: add re-signing support, probably
     }
     val conf = new conf(name, version)
@@ -98,22 +105,37 @@ class Injector extends xsbti.AppMain {
     val patterns = conf.jars()
     val dirs = conf.directories()
     val checksums = !conf.noChecksums()
+    val quiet = conf.quiet() && !debug
 
     // Are we specifying a new destination directory?
-    // not implemented yet
-    //    val to = conf.to.get
-    //... find a common base for all dirs, and make a recursive copy,
-    // then use "to" rather than "dirs" as a base to search jars
+    val to = conf.to.get
+    val jarDirs = to match {
+      case Some(toDir) =>
+        val dest = new File(toDir)
+        dest.mkdirs()
+        if (debug) println("Copying into " + toDir + ":")
+        dirs foreach { d =>
+          // copy the dirs (or individual jars) into the "to" destination directory
+          val f = new File(d)
+          if (f.isFile)
+            copyFile(f, dest / f.getName, preserveLastModified = true)
+          else
+            copyDirectory(f, dest, overwrite = true, preserveLastModified = true)
+          if (debug) println("... " + d)
+        }
+        Seq(toDir)
+      case None => dirs
+    }
 
     // Let's find out which jars need to be processed. This code will work
     // equally well if an element of "dirs" is a jar file, rather than a directory.
     //
     val filter = patterns.map(GlobFilter(_)).reduce(_ | _).--(DirectoryFilter)
-    val jars = dirs.map(new File(_)).map(_.**(filter)).reduce(_ +++ _).get // APL?
+    val jars = jarDirs.map(new File(_)).map(_.**(filter)).reduce(_ +++ _).get // APL?
 
     val targets = filesAndTargets.map(_._2)
     jars foreach { jar =>
-      if (debug) println("Rewriting: " + jar.getCanonicalPath + "")
+      if (!quiet) println("Rewriting: " + jar.getCanonicalPath + "")
       withTemporaryFile("injector", "tempJar") { temp =>
         val out = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(temp)))
 
@@ -168,10 +190,7 @@ class Injector extends xsbti.AppMain {
           Seq("md5", "sha1") foreach { algorithm =>
             val checksumFile = new File(jar.getCanonicalPath + "." + algorithm)
             if (checksumFile.exists) {
-              val writer = new PrintWriter(checksumFile)
-              writer.write(ChecksumHelper.computeAsString(jar, algorithm))
-              writer.flush()
-              writer.close()
+              write(checksumFile, ChecksumHelper.computeAsString(jar, algorithm))
             }
           }
         }

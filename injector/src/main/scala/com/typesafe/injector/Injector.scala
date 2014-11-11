@@ -19,6 +19,7 @@ import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.JarFile
 import java.util.jar.JarEntry
+import collection.JavaConversions._
 
 object InjectorMain { def main(args: Array[String]) = (new Injector).start(args, Defaults.name, Defaults.version) }
 case class Exit(val code: Int) extends xsbti.Exit
@@ -59,7 +60,8 @@ class Injector extends xsbti.AppMain {
         "specifies just a directory, please append a '/' to the path string.",
         required = true, validate = (_.map(_.split('@').head).forall(fileExists(_, dirs = false))))
       val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
-        "that will be processed. Every directory will be scanned recursively.", validate = (_.forall(fileExists(_, dirs = true))))
+        "that will be processed. Every directory will be scanned recursively. In place of a directory, you can specify "+
+        "individual jar files.", validate = (_.forall(fileExists(_, dirs = true))))
       val jars = opt[List[String]](descr = "Patterns that specify which jars should be considered, in glob format." +
         "For instance, c*.jar will match all jars whose basename begins with c. If multiple patterns are specified, " +
         "all the jars that match at least one pattern will be considered. All patterns must end with \".jar\". " +
@@ -82,8 +84,10 @@ class Injector extends xsbti.AppMain {
     val conf = new conf(name, version)
     val debug = conf.debug()
     val filesAndTargets = conf.files().map { fileAndTarget =>
-      val filePath = fileAndTarget.split('@').head
-      val targetBase = fileAndTarget.drop(filePath.length)
+      val (filePath, targetBase) = fileAndTarget.split("@", 2) match {
+        case Array(f) => (f, "")
+        case Array(f, t) => (f, t)
+      }
       val file = new File(filePath)
       val target = if (targetBase == "" || targetBase.endsWith("/"))
         targetBase + file.getName
@@ -108,22 +112,28 @@ class Injector extends xsbti.AppMain {
 
     val targets = filesAndTargets.map(_._2)
     jars foreach { jar =>
+      if (debug) println("Rewriting: " + jar.getCanonicalPath + "")
       withTemporaryFile("injector", "tempJar") { temp =>
-        val in = new JarInputStream(new BufferedInputStream(new FileInputStream(jar)))
-        val out = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(jar)))
+        val out = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(temp)))
 
         // first we copy the old jar, stripping away the entries that will be overwritten
 
         val bufferSize = 131072
         val buffer = new Array[Byte](bufferSize)
         def writeEntry(where: JarEntry, source: InputStream) = {
+          if (debug) println("writing entry: " + where.getName)
           out.putNextEntry(where)
           Stream.continually(source.read(buffer, 0, bufferSize)).takeWhile(_ != -1).
-            foreach { size => out.write(buffer, 0, size) }
+            foreach { size =>
+              if (debug) println("Read " + size + " bytes")
+              out.write(buffer, 0, size)
+            }
         }
-        Stream.continually(in.getNextJarEntry).takeWhile(_ != null).foreach { entry =>
+        val in = new JarFile(jar)
+        in.entries.foreach { entry =>
+          println("Found entry " + entry.getName + ", size: " + entry.getSize)
           if (!targets.contains(entry.getName())) {
-            writeEntry(entry, in)
+            writeEntry(entry, in.getInputStream(entry))
           }
         }
 

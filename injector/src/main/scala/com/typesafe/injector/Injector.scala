@@ -34,7 +34,7 @@ class Injector extends xsbti.AppMain {
         Exit(1)
     }
   }
-  def start(args: Array[String], name: String = "injector", version: String = "") = {
+  def start(args: Array[String], name: String, version: String) = {
     class conf(n: String, v: String) extends ScallopConf(args.toList) {
       printedName = n
       version("Typesafe " + n + " " + v)
@@ -131,7 +131,7 @@ class Injector extends xsbti.AppMain {
     // equally well if an element of "dirs" is a jar file, rather than a directory.
     //
     val filter = patterns.map(GlobFilter(_)).reduce(_ | _).--(DirectoryFilter)
-    val jars = jarDirs.map(new File(_)).map(_.**(filter)).reduce(_ +++ _).get // APL?
+    val jars = jarDirs.map(new File(_).**(filter)).reduce(_ +++ _).get // APL?
 
     val targets = filesAndTargets.map(_._2)
     jars foreach { jar =>

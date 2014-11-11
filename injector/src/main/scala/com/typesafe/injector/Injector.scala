@@ -2,6 +2,7 @@ package com.typesafe.injector
 
 import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
+import org.apache.ivy.util.ChecksumHelper
 import sbt.PathFinder._
 import sbt.Path._
 import sbt.IO._
@@ -13,6 +14,7 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.PrintWriter
 import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.jar.JarFile
@@ -72,9 +74,9 @@ class Injector extends xsbti.AppMain {
         default = Some(List[String]("*.jar")))
       val noChecksums = opt[Boolean](descr = "Do not regenerate the checksum files of the modified jar files. By default, " +
         "New mds and sha1 files will be generated, replacing the old ones.")
-//      val to = opt[String](descr = "By default, the existing files will be overwritten in place. If you would like to "+
-//          "preserve the originals, you can specify using this option a directory where the new files will be stored. The "+
-//          "destination directory will be created, if it does not exist yet.")
+      //      val to = opt[String](descr = "By default, the existing files will be overwritten in place. If you would like to "+
+      //          "preserve the originals, you can specify using this option a directory where the new files will be stored. The "+
+      //          "destination directory will be created, if it does not exist yet.")
       // TODO: add re-signing support, probably
     }
     val conf = new conf(name, version)
@@ -92,10 +94,10 @@ class Injector extends xsbti.AppMain {
     val patterns = conf.jars()
     val dirs = conf.directories()
     val checksums = !conf.noChecksums()
-    
+
     // Are we specifying a new destination directory?
     // not implemented yet
-//    val to = conf.to.get
+    //    val to = conf.to.get
     //... find a common base for all dirs, and make a recursive copy,
     // then use "to" rather than "dirs" as a base to search jars
 
@@ -111,7 +113,7 @@ class Injector extends xsbti.AppMain {
         val out = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(jar)))
 
         // first we copy the old jar, stripping away the entries that will be overwritten
-        
+
         val bufferSize = 131072
         val buffer = new Array[Byte](bufferSize)
         def writeEntry(where: JarEntry, source: InputStream) = {
@@ -126,7 +128,7 @@ class Injector extends xsbti.AppMain {
         }
 
         // then, we insert the new entries at the appropriate target locations
-        
+
         filesAndTargets.foreach {
           case (file, target) =>
             writeEntry(new JarEntry(target), new BufferedInputStream(new FileInputStream(file)))
@@ -134,13 +136,21 @@ class Injector extends xsbti.AppMain {
         in.close()
         out.flush()
         out.close()
-        
-        // time to move the temporary file to the final location
-        move(temp,jar)
-        
+
+        // time to move the temporary file back to the original location
+        move(temp, jar)
+
         // ok. Do we need to regenerate the checksum files?
         if (checksums) {
-          
+          Seq("md5", "sha1") foreach { algorithm =>
+            val checksumFile = new File(jar.getCanonicalPath + "." + algorithm)
+            if (checksumFile.exists) {
+              val writer = new PrintWriter(checksumFile)
+              writer.write(ChecksumHelper.computeAsString(jar, algorithm))
+              writer.flush()
+              writer.close()
+            }
+          }
         }
       }
     }

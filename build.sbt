@@ -24,6 +24,7 @@ libraryDependencies in Global := (libraryDependencies in Global).value ++ {
   Seq(
   "org.rogach" %% "scallop" % "0.9.5",
   "org.scala-sbt" % "launcher-interface" % sbtVer % "provided",
+  "org.apache.ivy" % "ivy" % "2.3.0-rc1",
   "org.scala-sbt" % "io" % sbtVer
 )}
 

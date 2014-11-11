@@ -4,10 +4,17 @@ import org.rogach.scallop._
 import org.rogach.scallop.exceptions.ScallopException
 import sbt.PathFinder._
 import sbt.Path._
+import sbt.IO._
 import sbt.GlobFilter
 import sbt.DirectoryFilter
 import java.io.File
+import java.io.InputStream
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.util.jar.JarInputStream
+import java.util.jar.JarOutputStream
 import java.util.jar.JarFile
 import java.util.jar.JarEntry
 
@@ -44,8 +51,11 @@ class Injector extends xsbti.AppMain {
         if (!valid) println("This " + (if (dirs) "directory" else "file") + " cannot be found: " + p)
         valid
       }
-      val files = opt[List[String]](descr = "Path to the file(s) that should be inserted into jars.",
-        required = true, validate = (_.forall(fileExists(_, dirs = false))))
+      val files = opt[List[String]](descr = "Path to the file(s) that should be inserted into jars. They will " +
+        "by default be added at the root of the jar; if you would like them at a different location, please " +
+        "append a \"@\" and the desired path, as in \"manifest.txt@META-INF/MANIFEST.MF\". If the destination path " +
+        "specifies just a directory, please append a '/' to the path string.",
+        required = true, validate = (_.map(_.split('@').head).forall(fileExists(_, dirs = false))))
       val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
         "that will be processed. Every directory will be scanned recursively.", validate = (_.forall(fileExists(_, dirs = true))))
       val jars = opt[List[String]](descr = "Patterns that specify which jars should be considered, in glob format." +
@@ -61,22 +71,78 @@ class Injector extends xsbti.AppMain {
         }),
         default = Some(List[String]("*.jar")))
       val noChecksums = opt[Boolean](descr = "Do not regenerate the checksum files of the modified jar files. By default, " +
-        "New mds and sha1 files will be generated, to replace the existing ones.")
+        "New mds and sha1 files will be generated, replacing the old ones.")
+//      val to = opt[String](descr = "By default, the existing files will be overwritten in place. If you would like to "+
+//          "preserve the originals, you can specify using this option a directory where the new files will be stored. The "+
+//          "destination directory will be created, if it does not exist yet.")
+      // TODO: add re-signing support, probably
     }
     val conf = new conf(name, version)
     val debug = conf.debug()
-    val file = conf.files()
+    val filesAndTargets = conf.files().map { fileAndTarget =>
+      val filePath = fileAndTarget.split('@').head
+      val targetBase = fileAndTarget.drop(filePath.length)
+      val file = new File(filePath)
+      val target = if (targetBase == "" || targetBase.endsWith("/"))
+        targetBase + file.getName
+      else
+        targetBase
+      (file, target)
+    }
     val patterns = conf.jars()
     val dirs = conf.directories()
     val checksums = !conf.noChecksums()
+    
+    // Are we specifying a new destination directory?
+    // not implemented yet
+//    val to = conf.to.get
+    //... find a common base for all dirs, and make a recursive copy,
+    // then use "to" rather than "dirs" as a base to search jars
 
     // Let's find out which jars need to be processed
 
     val filter = patterns.map(GlobFilter(_)).reduce(_ | _).--(DirectoryFilter)
-    val jars = dirs.map(new File(_)).map(_.**(filter)).reduce(_ +++ _).get
+    val jars = dirs.map(new File(_)).map(_.**(filter)).reduce(_ +++ _).get // APL?
 
+    val targets = filesAndTargets.map(_._2)
     jars foreach { jar =>
+      withTemporaryFile("injector", "tempJar") { temp =>
+        val in = new JarInputStream(new BufferedInputStream(new FileInputStream(jar)))
+        val out = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(jar)))
 
+        // first we copy the old jar, stripping away the entries that will be overwritten
+        
+        val bufferSize = 131072
+        val buffer = new Array[Byte](bufferSize)
+        def writeEntry(where: JarEntry, source: InputStream) = {
+          out.putNextEntry(where)
+          Stream.continually(source.read(buffer, 0, bufferSize)).takeWhile(_ != -1).
+            foreach { size => out.write(buffer, 0, size) }
+        }
+        Stream.continually(in.getNextJarEntry).takeWhile(_ != null).foreach { entry =>
+          if (!targets.contains(entry.getName())) {
+            writeEntry(entry, in)
+          }
+        }
+
+        // then, we insert the new entries at the appropriate target locations
+        
+        filesAndTargets.foreach {
+          case (file, target) =>
+            writeEntry(new JarEntry(target), new BufferedInputStream(new FileInputStream(file)))
+        }
+        in.close()
+        out.flush()
+        out.close()
+        
+        // time to move the temporary file to the final location
+        move(temp,jar)
+        
+        // ok. Do we need to regenerate the checksum files?
+        if (checksums) {
+          
+        }
+      }
     }
   }
 }

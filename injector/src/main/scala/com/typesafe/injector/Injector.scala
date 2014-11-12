@@ -20,6 +20,7 @@ import java.util.jar.JarOutputStream
 import java.util.jar.JarFile
 import java.util.jar.JarEntry
 import collection.JavaConversions._
+import org.rogach.scallop.exceptions.RequiredOptionNotFound
 
 object InjectorMain { def main(args: Array[String]) = (new Injector).start(args, Defaults.name, Defaults.version) }
 case class Exit(val code: Int) extends xsbti.Exit
@@ -85,6 +86,14 @@ class Injector extends xsbti.AppMain {
         }
         valid
       })
+      // if a required argument is missing, print the help text before the error message
+      override protected def onError(e: Throwable) = e match {
+        case x @ RequiredOptionNotFound(name) =>
+          printHelp
+          super.onError(x)
+        // other exceptions handling
+        case x => super.onError(x)
+      }
       val quiet = opt[Boolean](descr = "Do not print messages on the console.")
       // Note: the tool will currently not re-sign previously signed jars
     }

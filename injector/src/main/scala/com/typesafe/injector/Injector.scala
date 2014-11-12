@@ -57,7 +57,7 @@ class Injector extends xsbti.AppMain {
       val files = opt[List[String]](descr = "Path to the file(s) that should be inserted into jars. They will " +
         "by default be added at the root of the jar; if you would like them at a different location, please " +
         "append a \"@\" and the desired path, as in \"manifest.txt@META-INF/MANIFEST.MF\". If the destination path " +
-        "specifies just a directory, please append a '/' to the path string.",
+        "specifies just a directory, please append '/' to the path string.",
         required = true, validate = (_.map(_.split('@').head).forall(fileExists(_, dirs = false))))
       val directories = opt[List[String]](required = true, descr = "One or more paths to the directories containing the jars " +
         "that will be processed. Every directory will be scanned recursively. In place of a directory, you can specify " +

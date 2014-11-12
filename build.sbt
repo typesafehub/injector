@@ -1,4 +1,4 @@
-organization in Global := "com.typesafe"
+organization in Global := "com.typesafe.injector"
 
 version in Global := "0.1"
 
@@ -29,7 +29,7 @@ libraryDependencies in Global := (libraryDependencies in Global).value ++ {
 )}
 
 lazy val root = Project("root", file("."))
-  .aggregate(injector)
+  .aggregate(injector,launcher)
   .settings(
       run := {
         (run in injector in Compile).evaluated
@@ -37,3 +37,53 @@ lazy val root = Project("root", file("."))
       publish := (),
       publishLocal := ()
     )
+
+lazy val commandLine = taskKey[Unit]("")
+
+lazy val launcher = project.settings(
+    resolvers += Resolver.typesafeIvyRepo("releases"),
+    libraryDependencies += "org.scala-sbt" % "sbt-launch" % sbtVersion.value,
+    packageBin in Compile := {
+      val dir = resourceManaged.value
+      val cp = (externalDependencyClasspath in Compile).value
+      val launcherJar = cp.find { af =>
+        af.get(moduleID.key) match {
+          case None => false
+          case Some(m) => m.name == "sbt-launch" && m.organization == "org.scala-sbt"
+        }
+      }.getOrElse(sys.error("Unexpected: sbt launcher jar not found.")).data
+println("Using launcher: "+launcherJar.getCanonicalPath)
+      // I'd love to invoke (Keys.run in injector), but sbt keeps taunting me
+      // with "Illegal dynamic reference". So I call "jar" manually.
+      val from=dir/"from"
+      val to=dir/"polpetta.jar"
+      from.mkdirs()
+      IO.delete(from.*("*").get)
+      Process(Seq("jar","xf",launcherJar.getCanonicalPath),from).lines.foreach(l=>l)
+      IO.write(from / "sbt" / "sbt.boot.properties","""
+[scala]
+  version: 2.11.4
+[app]
+  org: com.typesafe.injector
+  name: injector
+  version: 0.1
+  class: com.typesafe.injector.Injector
+  components: xsbti
+  cross-versioned: binary
+[repositories]
+  local
+  typesafe-ivy-releases: https://repo.typesafe.com/typesafe/ivy-releases/, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext], bootOnly
+  maven-central
+[boot]
+  directory: ${sbt.boot.directory-${sbt.global.base-${user.home}/.sbt}/boot/}
+[ivy]
+  ivy-home: ${sbt.ivy.home-${user.home}/.ivy2/}
+  checksums: ${sbt.checksums-sha1,md5}
+  override-build-repos: ${sbt.override.build.repos-false}
+  repository-config: ${sbt.repository.config-${sbt.global.base-${user.home}/.sbt}/repositories}
+""")
+      IO.copyFile(dir / "META-INF" / "MANIFEST.MF",dir / "manifest.txt")
+      Process(Seq("jar","cfm",to.getCanonicalPath,"../manifest.txt")++Process("ls",from).lines,from).lines.foreach(l=>l)
+      to
+}
+)

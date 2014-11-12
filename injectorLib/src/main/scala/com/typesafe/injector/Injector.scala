@@ -27,7 +27,8 @@ case class Exit(val code: Int) extends xsbti.Exit
 class Injector extends xsbti.AppMain {
   def run(configuration: xsbti.AppConfiguration) = {
     try {
-      start(configuration.arguments, configuration.provider.id.name, configuration.provider.id.version)
+      // configuration.provider.id.name will be "injector-lib"
+      start(configuration.arguments, Defaults.name, Defaults.version)
       Exit(0)
     } catch {
       case e: Exception =>

@@ -4,7 +4,10 @@ version in Global := "0.1"
 
 scalaVersion in Global := "2.11.4"
 
-lazy val injector = project.settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version, name, streams) map { (dir, v, n, s) =>
+// injector is actually the launcher, with a custom configuration
+// while injector-lib is the real code
+
+lazy val injectorLib = project.settings(sourceGenerators in Compile <+= (sourceManaged in Compile, version in injector, name in injector, streams) map { (dir, v, n, s) =>
         val file = dir / "Defaults.scala"
         if(!dir.isDirectory) dir.mkdirs()
         s.log.info("Generating "+file.getName+" into "+file.getCanonicalPath)
@@ -17,7 +20,8 @@ lazy val injector = project.settings(sourceGenerators in Compile <+= (sourceMana
           }
         """ format (v, n, Process("git log --pretty=format:%H -n 1").lines.head))
         Seq(file)
-      })
+      },
+      name := "injector-lib")
 
 libraryDependencies in Global := (libraryDependencies in Global).value ++ {
   val sbtVer = sbtVersion.value
@@ -29,7 +33,7 @@ libraryDependencies in Global := (libraryDependencies in Global).value ++ {
 )}
 
 lazy val root = Project("root", file("."))
-  .aggregate(injector,launcher)
+  .aggregate(injector,injectorLib)
   .settings(
       run := {
         (run in injector in Compile).evaluated
@@ -40,7 +44,7 @@ lazy val root = Project("root", file("."))
 
 lazy val commandLine = taskKey[Unit]("")
 
-lazy val launcher = project.settings(
+lazy val injector = project.settings(
     resolvers += Resolver.typesafeIvyRepo("releases"),
     libraryDependencies += "org.scala-sbt" % "sbt-launch" % sbtVersion.value,
     packageBin in Compile := {
@@ -65,7 +69,7 @@ println("Using launcher: "+launcherJar.getCanonicalPath)
   version: 2.11.4
 [app]
   org: com.typesafe.injector
-  name: injector
+  name: injector-lib
   version: 0.1
   class: com.typesafe.injector.Injector
   components: xsbti

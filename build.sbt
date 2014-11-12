@@ -47,6 +47,7 @@ lazy val commandLine = taskKey[Unit]("")
 lazy val injector = project.settings(
     resolvers += Resolver.typesafeIvyRepo("releases"),
     libraryDependencies += "org.scala-sbt" % "sbt-launch" % sbtVersion.value,
+    crossVersion := CrossVersion.Disabled,
     packageBin in Compile := {
       val dir = resourceManaged.value
       val cp = (externalDependencyClasspath in Compile).value

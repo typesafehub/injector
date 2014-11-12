@@ -82,7 +82,7 @@ println("Using launcher: "+launcherJar.getCanonicalPath)
   override-build-repos: ${sbt.override.build.repos-false}
   repository-config: ${sbt.repository.config-${sbt.global.base-${user.home}/.sbt}/repositories}
 """)
-      IO.copyFile(dir / "META-INF" / "MANIFEST.MF",dir / "manifest.txt")
+      IO.copyFile(from / "META-INF" / "MANIFEST.MF",dir / "manifest.txt")
       Process(Seq("jar","cfm",to.getCanonicalPath,"../manifest.txt")++Process("ls",from).lines,from).lines.foreach(l=>l)
       to
 }

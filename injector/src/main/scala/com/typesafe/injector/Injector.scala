@@ -49,10 +49,18 @@ class Injector extends xsbti.AppMain {
                |or multiple times the same option to add elements.
                |For additional information, please contact http://www.typesafe.com.""".stripMargin)
       val debug = opt[Boolean](noshort = true, descr = "Print more debugging information")
+      private def diagnose(message: String) = {
+        if (System.console() == null) {
+          // no colors on output
+          println("[%s] Error: %s" format (printedName, message))
+        } else {
+          println("[\033[31m%s\033[0m] Error: %s" format (printedName, message))
+        }
+      }
       private def fileExists(p: String, dirs: Boolean) = {
         val f = new File(p)
         val valid = f.exists
-        if (!valid) println("This " + (if (dirs) "directory" else "file") + " cannot be found: " + p)
+        if (!valid) diagnose((if (dirs) "Directory" else "File") + " not found: " + f.getCanonicalPath)
         valid
       }
       val files = opt[List[String]](descr = "Path to the file(s) that should be inserted into jars. They will " +
@@ -70,7 +78,7 @@ class Injector extends xsbti.AppMain {
         validate = (_.forall { j =>
           val valid = j.endsWith(".jar") && !j.contains("/")
           if (!valid) {
-            println("This pattern contains a forward slash, or does not end with \".jar\": " + j)
+            diagnose("This pattern contains a forward slash, or does not end with \".jar\": " + j)
           }
           valid
         }),
@@ -82,7 +90,7 @@ class Injector extends xsbti.AppMain {
         "destination directory will be created, if it does not exist yet.", validate = { to =>
         val valid = !new File(to).isFile
         if (!valid) {
-          println("The selected \"to\" destination already exists, and is a file")
+          diagnose("The selected destination already exists, and is a file")
         }
         valid
       })

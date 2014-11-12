@@ -67,7 +67,7 @@ println("Using launcher: "+launcherJar.getCanonicalPath)
       Process(Seq("jar","xf",launcherJar.getCanonicalPath),from).lines.foreach(l=>l)
       IO.write(from / "sbt" / "sbt.boot.properties","""
 [scala]
-  version: 2.11.4
+  version: """+scalaVersion.value+"""
 [app]
   org: com.typesafe.injector
   name: injector-lib

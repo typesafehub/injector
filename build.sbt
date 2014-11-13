@@ -44,6 +44,12 @@ lazy val root = Project("root", file("."))
 
 lazy val commandLine = taskKey[Unit]("")
 
+publishTo in Global := {
+  val typesafe = "http://private-repo.typesafe.com/typesafe/maven-"
+  val where = if (isSnapshot.value) "snapshots" else "releases"
+  Some(sbt.Resolver.url("typesafe-"+where,url("http://private-repo.typesafe.com/typesafe/maven-"+where)))
+}
+
 lazy val injector = project.settings(
     resolvers += Resolver.typesafeIvyRepo("releases"),
     libraryDependencies += "org.scala-sbt" % "sbt-launch" % sbtVersion.value,

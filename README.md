@@ -18,7 +18,11 @@ If you would like to call Injector from your program, please include this librar
 
     "com.typesafe.injector" %% "injector-lib" % "0.2"
 
-The library has been published for Scala 2.11. Then, call:
+This library has been published for Scala 2.11. You will also need to add the repository:
+
+    resolvers += "Typesafe Maven Releases" at "http://repo.typesafe.com/typesafe/maven-releases"
+
+Then, call:
 
     com.typesafe.injector.InjectorMain(args: Array[String])
 

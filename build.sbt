@@ -1,6 +1,6 @@
 organization in Global := "com.typesafe.injector"
 
-version in Global := "0.1"
+version in Global := "0.2"
 
 scalaVersion in Global := "2.11.4"
 
@@ -77,13 +77,14 @@ println("Using launcher: "+launcherJar.getCanonicalPath)
 [app]
   org: com.typesafe.injector
   name: injector-lib
-  version: 0.1
+  version: 0.2
   class: com.typesafe.injector.Injector
   components: xsbti
   cross-versioned: binary
 [repositories]
   local
   typesafe-ivy-releases: https://repo.typesafe.com/typesafe/ivy-releases/, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext], bootOnly
+  typesafe-maven-releases: https://repo.typesafe.com/typesafe/maven-releases
   maven-central
 [boot]
   directory: ${sbt.boot.directory-${sbt.global.base-${user.home}/.sbt}/boot/}

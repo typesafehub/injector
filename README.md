@@ -6,7 +6,7 @@
 
 ## Download
 
-Please download the executable jar file from this location: [injector-0.2.jar](http://repo.typesafe.com/typesafe/maven-releases/com/typesafe/injector/injector/0.2/injector-0.2.jar)
+Please download the executable jar file from this location: [injector-0.2.jar](http://repo.typesafe.com/typesafe/releases/com/typesafe/injector/injector/0.2/injector-0.2.jar)
 
 You can then launch the program using:
 
@@ -20,7 +20,7 @@ If you would like to call Injector from your program, please include this librar
 
 This library has been published for Scala 2.11. You will also need to add the repository:
 
-    resolvers += "Typesafe Maven Releases" at "http://repo.typesafe.com/typesafe/maven-releases"
+    resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases"
 
 Then, call:
 

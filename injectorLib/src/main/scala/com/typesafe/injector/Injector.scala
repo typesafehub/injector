@@ -60,7 +60,7 @@ class Injector extends xsbti.AppMain {
           // no colors on output
           println("[%s] Error: %s" format (printedName, message))
         } else {
-          println("[\033[31m%s\033[0m] Error: %s" format (printedName, message))
+          println("[\u001b[31m%s\u001b[0m] Error: %s" format (printedName, message))
         }
       }
       private def fileExists(p: String, dirs: Boolean) = {

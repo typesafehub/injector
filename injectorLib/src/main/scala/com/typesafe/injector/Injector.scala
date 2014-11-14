@@ -22,12 +22,10 @@ import java.util.jar.JarEntry
 import collection.JavaConversions._
 import org.rogach.scallop.exceptions.RequiredOptionNotFound
 
-object InjectorMain {
-  def main(args: Array[String]) = (new Injector).start(args, Defaults.name, Defaults.version)
-}
 case class Exit(val code: Int) extends xsbti.Exit
 object Injector {
-  def apply(args: String*) = InjectorMain.main(args.toArray)
+  def main(args: Array[String]) = (new Injector).start(args, Defaults.name, Defaults.version)
+  def apply(args: String*) = main(args.toArray)
 }
 class Injector extends xsbti.AppMain {
   def run(configuration: xsbti.AppConfiguration) = {

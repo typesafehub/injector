@@ -4,6 +4,8 @@ version in Global := "0.2"
 
 scalaVersion in Global := "2.11.4"
 
+scalacOptions in ThisBuild ++= Seq("-deprecation")
+
 // injector is actually the launcher, with a custom configuration
 // while injector-lib is the real code
 

@@ -6,29 +6,29 @@
 
 ## Download
 
-Please download the executable jar file from this location: [injector-0.2.jar](http://repo.typesafe.com/typesafe/releases/com/typesafe/injector/injector/0.2/injector-0.2.jar)
+Please download the executable jar file from this location: [injector-0.3.jar](http://repo.typesafe.com/typesafe/releases/com/typesafe/injector/injector/0.3/injector-0.3.jar)
 
 You can then launch the program using:
 
-    java -jar injector-0.2.jar <args>
+    java -jar injector-0.3.jar <args>
 
 ## Use as a library
 
 If you would like to call Injector from your program, please include this library:
 
-    "com.typesafe.injector" %% "injector-lib" % "0.2"
+    "com.typesafe.injector" %% "injector-lib" % "0.3"
 
-This library has been published for Scala 2.11. You will also need to add the repository:
+This library has been published for Scala 2.11 and 2.10. You will also need to add the repository:
 
-    resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases"
+    resolvers += Resolver.typesafeRepo("releases")
 
 Then, call:
 
-    com.typesafe.injector.InjectorMain(args: Array[String])
+    com.typesafe.injector.Injector(arg, ...)
 
 ## Usage
 
-    Typesafe injector 0.2
+    Typesafe injector 0.3
     Usage: injector [OPTIONS]
     Injector is a simple tool that will inject additional files into a set of
     artifact jar files, and recalculate their checksum files appropriately.

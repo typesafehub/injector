@@ -1,6 +1,6 @@
 organization in Global := "com.typesafe.injector"
 
-version in Global := "0.2"
+version in Global := "0.3"
 
 scalaVersion in Global := "2.11.4"
 
@@ -79,7 +79,7 @@ println("Using launcher: "+launcherJar.getCanonicalPath)
 [app]
   org: com.typesafe.injector
   name: injector-lib
-  version: 0.2
+  version: """+(version in Global).value+"""
   class: com.typesafe.injector.Injector
   components: xsbti
   cross-versioned: binary

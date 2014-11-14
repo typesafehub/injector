@@ -24,14 +24,14 @@ import org.rogach.scallop.exceptions.RequiredOptionNotFound
 
 case class Exit(val code: Int) extends xsbti.Exit
 object Injector {
-  def main(args: Array[String]) = (new Injector).start(args, Defaults.name, Defaults.version)
+  def main(args: Array[String]) = (new Injector).start(args)
   def apply(args: String*) = main(args.toArray)
 }
 class Injector extends xsbti.AppMain {
   def run(configuration: xsbti.AppConfiguration) = {
     try {
       // configuration.provider.id.name will be "injector-lib"
-      start(configuration.arguments, Defaults.name, Defaults.version)
+      start(configuration.arguments)
       Exit(0)
     } catch {
       case e: Exception =>
@@ -39,12 +39,12 @@ class Injector extends xsbti.AppMain {
         Exit(1)
     }
   }
-  def start(args: Array[String], name: String, version: String) = {
-    class conf(n: String, v: String) extends ScallopConf(args.toList) {
-      printedName = n
-      version("Typesafe " + n + " " + v)
-      banner(("""Usage: """ + n + """ [OPTIONS]
-                |""" + (n.capitalize) + """ is a simple tool that will inject additional files into a set of
+  def start(args: Array[String]) = {
+    class conf extends ScallopConf(args.toList) {
+      printedName = Defaults.name
+      version("Typesafe " + Defaults.name + " " + Defaults.version)
+      banner(("""Usage: """ + Defaults.name + """ [OPTIONS]
+                |""" + (Defaults.name.capitalize) + """ is a simple tool that will inject additional files into a set of
                 |artifact jar files, and recalculate their checksum files appropriately.
                 |Options:
                 |""").stripMargin)
@@ -109,7 +109,7 @@ class Injector extends xsbti.AppMain {
       val quiet = opt[Boolean](descr = "Do not print messages on the console.")
       // Note: the tool will currently not re-sign previously signed jars
     }
-    val conf = new conf(name, version)
+    val conf = new conf
     val debug = conf.debug()
     val filesAndTargets = conf.files().map { fileAndTarget =>
       val (filePath, targetBase) = fileAndTarget.split("@", 2) match {

@@ -2,9 +2,11 @@ organization in Global := "com.typesafe.injector"
 
 version in Global := "0.3"
 
-scalaVersion in Global := "2.11.4"
+crossScalaVersions in Global := Seq("2.11.4", "2.10.4")
 
-scalacOptions in ThisBuild ++= Seq("-deprecation")
+scalaVersion in Global := (crossScalaVersions in Global).value.head
+
+scalacOptions in Global ++= Seq("-deprecation")
 
 // injector is actually the launcher, with a custom configuration
 // while injector-lib is the real code
@@ -99,5 +101,7 @@ println("Using launcher: "+launcherJar.getCanonicalPath)
       IO.copyFile(from / "META-INF" / "MANIFEST.MF",dir / "manifest.txt")
       Process(Seq("jar","cfm",to.getCanonicalPath,"../manifest.txt")++Process("ls",from).lines,from).lines.foreach(l=>l)
       to
-}
+},
+// only publish the launcher once
+      packagedArtifacts := { if (scalaVersion.value == crossScalaVersions.value.head) packagedArtifacts.value else Map.empty }
 )
